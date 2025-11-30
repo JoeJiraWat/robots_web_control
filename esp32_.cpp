@@ -2,7 +2,6 @@
 #include <WebServer.h>
 #include <ESP32Servo.h>
 
-// Replace with your desired AP credentials
 const char* ssid = "RobotControl";
 const char* password = "robot1234";
 
@@ -28,7 +27,6 @@ WebServer server(80);
 void setup() {
   Serial.begin(115200);
 
-  // Set motor pins as outputs
   pinMode(in1, OUTPUT);
   pinMode(in2, OUTPUT);
   pinMode(pwm1, OUTPUT);
@@ -36,46 +34,31 @@ void setup() {
   pinMode(in4, OUTPUT);
   pinMode(pwm2, OUTPUT);
 
-  // Attach servo pins
   servo1.attach(servo1Pin);
   servo2.attach(servo2Pin);
 
-  // Start ESP32 as a Wi-Fi access point
   WiFi.softAP(ssid, password);
-  IPAddress myIP = WiFi.softAPIP();
   Serial.print("AP IP address: ");
-  Serial.println(myIP);
-
-
-  // --- Web Server Endpoints ---
+  Serial.println(WiFi.softAPIP());
 
   // Servo 1
   server.on("/servo1", []() {
     if (server.hasArg("pos")) {
-      String posStr = server.arg("pos");
-      int pos = posStr.toInt();
-      servo1.write(pos);
+      servo1.write(server.arg("pos").toInt());
       server.send(200, "text/plain", "OK");
-    } else {
-      server.send(400, "text/plain", "Missing 'pos' parameter");
-    }
+    } else server.send(400, "text/plain", "Missing pos");
   });
 
   // Servo 2
   server.on("/servo2", []() {
     if (server.hasArg("pos")) {
-      String posStr = server.arg("pos");
-      int pos = posStr.toInt();
-      servo2.write(pos);
+      servo2.write(server.arg("pos").toInt());
       server.send(200, "text/plain", "OK");
-    } else {
-      server.send(400, "text/plain", "Missing 'pos' parameter");
-    }
+    } else server.send(400, "text/plain", "Missing pos");
   });
 
-  // Motor control
+  // Motor control (แก้ให้ตรงทิศทาง)
   server.on("/forward", []() {
-    Serial.println("forward");
     moveForward();
     server.send(200, "text/plain", "OK");
   });
@@ -85,12 +68,12 @@ void setup() {
     server.send(200, "text/plain", "OK");
   });
 
-  server.on("/left", []() {
+  server.on("/left", []() {    // ← แก้ให้เลี้ยวซ้ายจริง
     turnLeft();
     server.send(200, "text/plain", "OK");
   });
 
-  server.on("/right", []() {
+  server.on("/right", []() {   // ← แก้ให้เลี้ยวขวาจริง
     turnRight();
     server.send(200, "text/plain", "OK");
   });
@@ -125,7 +108,8 @@ void moveBackward() {
   analogWrite(pwm2, 255);
 }
 
-void turnLeft() {
+void turnLeft() {  
+  // ล้อซ้ายถอยหลัง, ล้อขวาเดินหน้า → เลี้ยวซ้าย
   digitalWrite(in1, LOW);
   digitalWrite(in2, HIGH);
   digitalWrite(in3, HIGH);
@@ -134,7 +118,8 @@ void turnLeft() {
   analogWrite(pwm2, 255);
 }
 
-void turnRight() {
+void turnRight() { 
+  // ล้อซ้ายเดินหน้า, ล้อขวาถอยหลัง → เลี้ยวขวา
   digitalWrite(in1, HIGH);
   digitalWrite(in2, LOW);
   digitalWrite(in3, LOW);
