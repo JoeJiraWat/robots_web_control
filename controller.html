@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Robot Web Controller</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+            background-color: #f0f0f0;
+        }
+        #container {
+            text-align: center;
+            padding: 2rem;
+            border-radius: 10px;
+            background-color: #fff;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+        h1 {
+            margin-top: 0;
+        }
+        .instructions {
+            margin-bottom: 1.5rem;
+            color: #555;
+        }
+        .key {
+            display: inline-block;
+            padding: 0.5rem 0.8rem;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            background-color: #fafafa;
+            box-shadow: 1px 1px 1px #ccc;
+            margin: 0.2rem;
+            font-weight: bold;
+        }
+        .status-bar {
+            margin-top: 1rem;
+            padding: 0.5rem;
+            border-radius: 5px;
+        }
+        .status-connected {
+            background-color: #d4edda;
+            color: #155724;
+        }
+        .status-disconnected {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+        .ip-input {
+            margin-bottom: 1rem;
+        }
+        input[type="text"] {
+            padding: 0.5rem;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+        button {
+            padding: 0.5rem 1rem;
+            border: none;
+            border-radius: 4px;
+            background-color: #007bff;
+            color: white;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="container">
+        <h1>Robot Web Controller</h1>
+
+        <div class="ip-input">
+            <label for="robotIp">Robot IP Address:</label>
+            <input type="text" id="robotIp" value="192.168.4.1">
+            <button id="checkConnection">Check Connection</button>
+        </div>
+
+        <div class="instructions">
+            <p>Click this window, then use your keyboard to control the robot.</p>
+            <div>
+                <strong>Movement:</strong> 
+                <span class="key">W</span> <span class="key">A</span> <span class="key">S</span> <span class="key">D</span> 
+                (Release to stop)
+            </div>
+            <div>
+                <strong>Servo 1:</strong> 
+                <span class="key">I</span> (Up) / <span class="key">K</span> (Down)
+            </div>
+            <div>
+                <strong>Servo 2:</strong> 
+                <span class="key">O</span> (Up) / <span class="key">L</span> (Down)
+            </div>
+        </div>
+        
+        <div id="servo-status">
+            <p>Servo 1 Angle: <span id="servo1-angle">90</span>°</p>
+            <p>Servo 2 Angle: <span id="servo2-angle">90</span>°</p>
+        </div>
+
+        <div id="status" class="status-bar status-disconnected">
+            Status: Disconnected
+        </div>
+    </div>
+
+    <script>
+        const ipInput = document.getElementById('robotIp');
+        const statusDiv = document.getElementById('status');
+        const checkConnectionBtn = document.getElementById('checkConnection');
+
+        const servo1AngleEl = document.getElementById('servo1-angle');
+        const servo2AngleEl = document.getElementById('servo2-angle');
+        
+        let servo1Angle = 90;
+        let servo2Angle = 90;
+        const servoStep = 5;
+        let servoInterval = null; // To hold the interval ID
+
+        let robotIp = ipInput.value;
+        const keysPressed = new Set();
+
+        function updateStatus(message, isConnected) {
+            statusDiv.textContent = `Status: ${message}`;
+            if (isConnected) {
+                statusDiv.className = 'status-bar status-connected';
+            } else {
+                statusDiv.className = 'status-bar status-disconnected';
+            }
+        }
+
+        async function sendCommand(command, params = null) {
+            robotIp = ipInput.value;
+            let url = `http://${robotIp}/${command}`;
+            if (params) {
+                const query = new URLSearchParams(params).toString();
+                url += `?${query}`;
+            }
+
+            try {
+                const response = await fetch(url, { mode: 'no-cors' });
+                updateStatus(`Command '${command}' sent.`, true);
+                 return true;
+            } catch (error) {
+                console.error("Fetch error:", error);
+                updateStatus("Disconnected - Check IP or Network", false);
+                return false;
+            }
+        }
+        
+        async function checkConnection() {
+            updateStatus("Checking...", false);
+            const success = await sendCommand(''); // Sends request to root '/'
+            if (success) {
+                 updateStatus("Connection seems OK. Ready for commands.", true);
+            }
+        }
+
+        function updateServo(servoNum, change) {
+            if (servoNum === 1) {
+                servo1Angle += change;
+                servo1Angle = Math.max(0, Math.min(180, servo1Angle)); // Clamp between 0-180
+                servo1AngleEl.textContent = servo1Angle;
+                sendCommand('servo1', { pos: servo1Angle });
+            } else if (servoNum === 2) {
+                servo2Angle += change;
+                servo2Angle = Math.max(0, Math.min(180, servo2Angle)); // Clamp between 0-180
+                servo2AngleEl.textContent = servo2Angle;
+                sendCommand('servo2', { pos: servo2Angle });
+            }
+        }
+        
+        function startServo(servoNum, change) {
+            if (servoInterval) return; // Already moving a servo
+            updateServo(servoNum, change); // Update once immediately
+            servoInterval = setInterval(() => updateServo(servoNum, change), 200); // Repeat every 200ms
+        }
+        
+        function stopServo() {
+            clearInterval(servoInterval);
+            servoInterval = null;
+        }
+
+        document.addEventListener('keydown', (event) => {
+            const key = event.key.toLowerCase();
+            if (keysPressed.has(key)) return; 
+            keysPressed.add(key);
+
+            switch (key) {
+                case 'w':
+                    sendCommand('backward');
+                    break;
+                case 's':
+                    sendCommand('forward');
+                    break;
+                case 'a': // Steer Left
+                    sendCommand('left');
+                    break;
+                case 'd': // Steer Right
+                    sendCommand('right');
+                    break;
+                case 'i':
+                    startServo(1, servoStep);
+                    break;
+                case 'k':
+                    startServo(1, -servoStep);
+                    break;
+                case 'o':
+                    startServo(2, servoStep);
+                    break;
+                case 'l':
+                    startServo(2, -servoStep);
+                    break;
+            }
+        });
+
+        document.addEventListener('keyup', (event) => {
+            const key = event.key.toLowerCase();
+            keysPressed.delete(key);
+            
+            // Stop Servos
+            if (['i', 'k', 'o', 'l'].includes(key)) {
+                stopServo();
+            }
+            
+            // Stop Motors if no movement keys are pressed
+            if (['w', 'a', 's', 'd'].includes(key)) {
+                if (!Array.from(keysPressed).some(k => ['w', 'a', 's', 'd'].includes(k))) {
+                    sendCommand('stop');
+                }
+            }
+        });
+        
+        checkConnectionBtn.addEventListener('click', checkConnection);
+
+        // Initial check
+        checkConnection();
+    </script>
+</body>
+</html>

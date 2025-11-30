@@ -7,77 +7,23 @@ const char* ssid = "RobotControl";
 const char* password = "robot1234";
 
 // Motor Left
-const int in1 = 35;
-const int in2 = 33;
-const int pwm1 = 32;
+const int in1 = 14; 
+const int in2 = 13;
+const int pwm1 = 12;
 
 // Motor Right
-const int in3 = 14;
-const int in4 = 13;
-const int pwm2 = 12;
+const int in3 = 27;
+const int in4 = 33;
+const int pwm2 = 32;
 
 // Servo pins
-const int servo1Pin = 25;
-const int servo2Pin = 26;
-
-// --- PWM Configuration ---
-const int PWM_CHANNEL_LEFT = 0;
-const int PWM_CHANNEL_RIGHT = 1;
-const int PWM_FREQ = 20000;
-const int PWM_RES = 8;
+const int servo1Pin = 26;
+const int servo2Pin = 23;
 
 Servo servo1;
 Servo servo2;
 
 WebServer server(80);
-
-void handleServo1() {
-  if (server.hasArg("pos")) {
-    String posStr = server.arg("pos");
-    int pos = posStr.toInt();
-    servo1.write(pos);
-    server.send(200, "text/plain", "OK");
-  } else {
-    server.send(400, "text/plain", "Missing 'pos' parameter");
-  }
-}
-
-void handleServo2() {
-  if (server.hasArg("pos")) {
-    String posStr = server.arg("pos");
-    int pos = posStr.toInt();
-    servo2.write(pos);
-    server.send(200, "text/plain", "OK");
-  } else {
-    server.send(400, "text/plain", "Missing 'pos' parameter");
-  }
-}
-
-void handleForward() {
-  moveForward();
-  server.send(200, "text/plain", "OK");
-}
-
-void handleBackward() {
-  moveBackward();
-  server.send(200, "text/plain", "OK");
-}
-
-void handleLeft() {
-  turnLeft();
-  server.send(200, "text/plain", "OK");
-}
-
-void handleRight() {
-  turnRight();
-  server.send(200, "text/plain", "OK");
-}
-
-void handleStop() {
-  stopMotors();
-  server.send(200, "text/plain", "OK");
-}
-
 
 void setup() {
   Serial.begin(115200);
@@ -89,14 +35,6 @@ void setup() {
   pinMode(in3, OUTPUT);
   pinMode(in4, OUTPUT);
   pinMode(pwm2, OUTPUT);
-
-  // Configure PWM channels
-  ledcSetup(PWM_CHANNEL_LEFT, PWM_FREQ, PWM_RES);
-  ledcSetup(PWM_CHANNEL_RIGHT, PWM_FREQ, PWM_RES);
-
-  // Attach PWM channels to GPIO pins
-  ledcAttachPin(pwm1, PWM_CHANNEL_LEFT);
-  ledcAttachPin(pwm2, PWM_CHANNEL_RIGHT);
 
   // Attach servo pins
   servo1.attach(servo1Pin);
@@ -112,17 +50,58 @@ void setup() {
   // --- Web Server Endpoints ---
 
   // Servo 1
-  server.on("/servo1", HTTP_GET, handleServo1);
+  server.on("/servo1", []() {
+    if (server.hasArg("pos")) {
+      String posStr = server.arg("pos");
+      int pos = posStr.toInt();
+      servo1.write(pos);
+      server.send(200, "text/plain", "OK");
+    } else {
+      server.send(400, "text/plain", "Missing 'pos' parameter");
+    }
+  });
 
   // Servo 2
-  server.on("/servo2", HTTP_GET, handleServo2);
+  server.on("/servo2", []() {
+    if (server.hasArg("pos")) {
+      String posStr = server.arg("pos");
+      int pos = posStr.toInt();
+      servo2.write(pos);
+      server.send(200, "text/plain", "OK");
+    } else {
+      server.send(400, "text/plain", "Missing 'pos' parameter");
+    }
+  });
 
   // Motor control
-  server.on("/forward", HTTP_GET, handleForward);
-  server.on("/backward", HTTP_GET, handleBackward);
-  server.on("/left", HTTP_GET, handleLeft);
-  server.on("/right", HTTP_GET, handleRight);
-  server.on("/stop", HTTP_GET, handleStop);
+  server.on("/forward", []() {
+    Serial.println("forward");
+    moveForward();
+    server.send(200, "text/plain", "OK");
+  });
+
+  server.on("/backward", []() {
+    Serial.println("backward");
+    moveBackward();
+    server.send(200, "text/plain", "OK");
+  });
+
+  server.on("/left", []() {
+    Serial.println("left");
+    turnLeft();
+    server.send(200, "text/plain", "OK");
+  });
+
+  server.on("/right", []() {
+    Serial.println("right");
+    turnRight();
+    server.send(200, "text/plain", "OK");
+  });
+
+  server.on("/stop", []() {
+    stopMotors();
+    server.send(200, "text/plain", "OK");
+  });
 
   server.begin();
 }
@@ -136,8 +115,8 @@ void moveForward() {
   digitalWrite(in2, LOW);
   digitalWrite(in3, HIGH);
   digitalWrite(in4, LOW);
-  ledcWrite(PWM_CHANNEL_LEFT, 255);
-  ledcWrite(PWM_CHANNEL_RIGHT, 255);
+  analogWrite(pwm1, 255);
+  analogWrite(pwm2, 255);
 }
 
 void moveBackward() {
@@ -145,8 +124,8 @@ void moveBackward() {
   digitalWrite(in2, HIGH);
   digitalWrite(in3, LOW);
   digitalWrite(in4, HIGH);
-  ledcWrite(PWM_CHANNEL_LEFT, 255);
-  ledcWrite(PWM_CHANNEL_RIGHT, 255);
+  analogWrite(pwm1, 255);
+  analogWrite(pwm2, 255);
 }
 
 void turnLeft() {
@@ -154,8 +133,8 @@ void turnLeft() {
   digitalWrite(in2, HIGH);
   digitalWrite(in3, HIGH);
   digitalWrite(in4, LOW);
-  ledcWrite(PWM_CHANNEL_LEFT, 255);
-  ledcWrite(PWM_CHANNEL_RIGHT, 255);
+  analogWrite(pwm1, 255);
+  analogWrite(pwm2, 255);
 }
 
 void turnRight() {
@@ -163,8 +142,8 @@ void turnRight() {
   digitalWrite(in2, LOW);
   digitalWrite(in3, LOW);
   digitalWrite(in4, HIGH);
-  ledcWrite(PWM_CHANNEL_LEFT, 255);
-  ledcWrite(PWM_CHANNEL_RIGHT, 255);
+  analogWrite(pwm1, 255);
+  analogWrite(pwm2, 255);
 }
 
 void stopMotors() {
@@ -172,6 +151,6 @@ void stopMotors() {
   digitalWrite(in2, LOW);
   digitalWrite(in3, LOW);
   digitalWrite(in4, LOW);
-  ledcWrite(PWM_CHANNEL_LEFT, 0);
-  ledcWrite(PWM_CHANNEL_RIGHT, 0);
+  analogWrite(pwm1, 0);
+  analogWrite(pwm2, 0);
 }

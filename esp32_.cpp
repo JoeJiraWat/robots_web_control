@@ -7,24 +7,18 @@ const char* ssid = "RobotControl";
 const char* password = "robot1234";
 
 // Motor Left
-const int in1 = 35;
-const int in2 = 33;
-const int pwm1 = 32;
+const int in1 = 14; 
+const int in2 = 13;
+const int pwm1 = 12;
 
 // Motor Right
-const int in3 = 14;
-const int in4 = 13;
-const int pwm2 = 12;
+const int in3 = 27;
+const int in4 = 33;
+const int pwm2 = 32;
 
 // Servo pins
-const int servo1Pin = 25;
-const int servo2Pin = 26;
-
-// --- PWM Configuration ---
-const int PWM_CHANNEL_LEFT = 0;
-const int PWM_CHANNEL_RIGHT = 1;
-const int PWM_FREQ = 20000;
-const int PWM_RES = 8;
+const int servo1Pin = 26;
+const int servo2Pin = 23;
 
 Servo servo1;
 Servo servo2;
@@ -41,16 +35,6 @@ void setup() {
   pinMode(in3, OUTPUT);
   pinMode(in4, OUTPUT);
   pinMode(pwm2, OUTPUT);
-
-  // Configure PWM channels
-  // ledcSetup(PWM_CHANNEL_LEFT, PWM_FREQ, PWM_RES);
-  // ledcSetup(PWM_CHANNEL_RIGHT, PWM_FREQ, PWM_RES);
-
-  // Attach PWM channels to GPIO pins
-  // ledcAttachPin(pwm1, PWM_CHANNEL_LEFT);
-  // ledcAttachPin(pwm2, PWM_CHANNEL_RIGHT);
-  ledcAttachChannel(pwm1, PWM_FREQ, PWM_RES, PWM_CHANNEL_LEFT);
-  ledcAttachChannel(pwm2, PWM_FREQ, PWM_RES, PWM_CHANNEL_RIGHT);
 
   // Attach servo pins
   servo1.attach(servo1Pin);
@@ -91,6 +75,7 @@ void setup() {
 
   // Motor control
   server.on("/forward", []() {
+    Serial.println("forward");
     moveForward();
     server.send(200, "text/plain", "OK");
   });
@@ -127,8 +112,8 @@ void moveForward() {
   digitalWrite(in2, LOW);
   digitalWrite(in3, HIGH);
   digitalWrite(in4, LOW);
-  ledcWrite(PWM_CHANNEL_LEFT, 255);
-  ledcWrite(PWM_CHANNEL_RIGHT, 255);
+  analogWrite(pwm1, 255);
+  analogWrite(pwm2, 255);
 }
 
 void moveBackward() {
@@ -136,8 +121,8 @@ void moveBackward() {
   digitalWrite(in2, HIGH);
   digitalWrite(in3, LOW);
   digitalWrite(in4, HIGH);
-  ledcWrite(PWM_CHANNEL_LEFT, 255);
-  ledcWrite(PWM_CHANNEL_RIGHT, 255);
+  analogWrite(pwm1, 255);
+  analogWrite(pwm2, 255);
 }
 
 void turnLeft() {
@@ -145,8 +130,8 @@ void turnLeft() {
   digitalWrite(in2, HIGH);
   digitalWrite(in3, HIGH);
   digitalWrite(in4, LOW);
-  ledcWrite(PWM_CHANNEL_LEFT, 255);
-  ledcWrite(PWM_CHANNEL_RIGHT, 255);
+  analogWrite(pwm1, 255);
+  analogWrite(pwm2, 255);
 }
 
 void turnRight() {
@@ -154,8 +139,8 @@ void turnRight() {
   digitalWrite(in2, LOW);
   digitalWrite(in3, LOW);
   digitalWrite(in4, HIGH);
-  ledcWrite(PWM_CHANNEL_LEFT, 255);
-  ledcWrite(PWM_CHANNEL_RIGHT, 255);
+  analogWrite(pwm1, 255);
+  analogWrite(pwm2, 255);
 }
 
 void stopMotors() {
@@ -163,6 +148,6 @@ void stopMotors() {
   digitalWrite(in2, LOW);
   digitalWrite(in3, LOW);
   digitalWrite(in4, LOW);
-  ledcWrite(PWM_CHANNEL_LEFT, 0);
-  ledcWrite(PWM_CHANNEL_RIGHT, 0);
+  analogWrite(pwm1, 0);
+  analogWrite(pwm2, 0);
 }
