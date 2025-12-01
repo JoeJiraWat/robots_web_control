@@ -14,3 +14,9 @@ Servo Front
 Servo Back
 ## O : Up
 ## L : Down
+
+
+How to use
+## 1.Open Live Server file controller.html
+## 2.Connect Wifi ESP32
+## 3.Press Checking IP
