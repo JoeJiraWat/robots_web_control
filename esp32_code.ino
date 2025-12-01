@@ -22,6 +22,25 @@ const int servo2Pin = 23;
 Servo servo1;
 Servo servo2;
 
+int currentServo1Pos = 90;
+int currentServo2Pos = 90;
+
+
+void smoothServoWrite(Servo &servo, int &currentPos, int targetPos, int delayTime) {
+  if (targetPos > currentPos) {
+    for (int pos = currentPos; pos <= targetPos; pos += 1) {
+      servo.write(pos);
+      delay(delayTime);
+    }
+  } else {
+    for (int pos = currentPos; pos >= targetPos; pos -= 1) {
+      servo.write(pos);
+      delay(delayTime);
+    }
+  }
+  currentPos = targetPos;
+}
+
 WebServer server(80);
 
 void setup() {
@@ -36,6 +55,10 @@ void setup() {
 
   servo1.attach(servo1Pin);
   servo2.attach(servo2Pin);
+  
+  servo1.write(currentServo1Pos);
+  servo2.write(currentServo2Pos);
+
 
   WiFi.softAP(ssid, password);
   Serial.print("AP IP address: ");
@@ -44,7 +67,13 @@ void setup() {
   // Servo 1
   server.on("/servo1", []() {
     if (server.hasArg("pos")) {
-      servo1.write(server.arg("pos").toInt());
+      int targetPos = server.arg("pos").toInt();
+      if (server.hasArg("smooth")) {
+        smoothServoWrite(servo1, currentServo1Pos, targetPos, 15);
+      } else {
+        servo1.write(targetPos);
+        currentServo1Pos = targetPos;
+      }
       server.send(200, "text/plain", "OK");
     } else server.send(400, "text/plain", "Missing pos");
   });
@@ -52,7 +81,13 @@ void setup() {
   // Servo 2
   server.on("/servo2", []() {
     if (server.hasArg("pos")) {
-      servo2.write(server.arg("pos").toInt());
+      int targetPos = server.arg("pos").toInt();
+      if (server.hasArg("smooth")) {
+        smoothServoWrite(servo2, currentServo2Pos, targetPos, 15);
+      } else {
+        servo2.write(targetPos);
+        currentServo2Pos = targetPos;
+      }
       server.send(200, "text/plain", "OK");
     } else server.send(400, "text/plain", "Missing pos");
   });

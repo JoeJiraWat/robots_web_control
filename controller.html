@@ -101,9 +101,13 @@
             </div>
         </div>
         
-        <div id="servo-status">
-            <p>Servo 1 Angle: <span id="servo1-angle">90</span>°</p>
-            <p>Servo 2 Angle: <span id="servo2-angle">90</span>°</p>
+        <div id="servo-controls">
+            <p><strong>Servo 1:</strong> <span class="key">I</span> (Up) / <span class="key">K</span> (Down) | Angle: <span id="servo1-angle">90</span>°</p>
+            <p><strong>Servo 2:</strong> <span class="key">O</span> (Up) / <span class="key">L</span> (Down) | Angle: <span id="servo2-angle">90</span>°</p>
+            <label>
+                <input type="checkbox" id="smooth-mode">
+                Smooth Servo Movement
+            </label>
         </div>
 
         <div id="status" class="status-bar status-disconnected">
@@ -118,11 +122,12 @@
 
         const servo1AngleEl = document.getElementById('servo1-angle');
         const servo2AngleEl = document.getElementById('servo2-angle');
+        const smoothModeCheckbox = document.getElementById('smooth-mode');
         
         let servo1Angle = 90;
         let servo2Angle = 90;
         const servoStep = 5;
-        let servoInterval = null; // To hold the interval ID
+        let servoInterval = null;
 
         let robotIp = ipInput.value;
         const keysPressed = new Set();
@@ -136,11 +141,17 @@
             }
         }
 
-        async function sendCommand(command, params = null) {
+        async function sendCommand(command, params = {}) {
             robotIp = ipInput.value;
             let url = `http://${robotIp}/${command}`;
-            if (params) {
-                const query = new URLSearchParams(params).toString();
+            
+            // Add smooth parameter if the checkbox is checked for servo commands
+            if (smoothModeCheckbox.checked && (command === 'servo1' || command === 'servo2')) {
+                params.smooth = '1';
+            }
+
+            const query = new URLSearchParams(params).toString();
+            if (query) {
                 url += `?${query}`;
             }
 
@@ -157,7 +168,8 @@
         
         async function checkConnection() {
             updateStatus("Checking...", false);
-            const success = await sendCommand(''); // Sends request to root '/'
+            // Use a command that is expected to work, like root, but without params
+            const success = await sendCommand('');
             if (success) {
                  updateStatus("Connection seems OK. Ready for commands.", true);
             }
@@ -166,21 +178,21 @@
         function updateServo(servoNum, change) {
             if (servoNum === 1) {
                 servo1Angle += change;
-                servo1Angle = Math.max(0, Math.min(180, servo1Angle)); // Clamp between 0-180
+                servo1Angle = Math.max(0, Math.min(180, servo1Angle));
                 servo1AngleEl.textContent = servo1Angle;
                 sendCommand('servo1', { pos: servo1Angle });
             } else if (servoNum === 2) {
                 servo2Angle += change;
-                servo2Angle = Math.max(0, Math.min(180, servo2Angle)); // Clamp between 0-180
+                servo2Angle = Math.max(0, Math.min(180, servo2Angle));
                 servo2AngleEl.textContent = servo2Angle;
                 sendCommand('servo2', { pos: servo2Angle });
             }
         }
         
         function startServo(servoNum, change) {
-            if (servoInterval) return; // Already moving a servo
-            updateServo(servoNum, change); // Update once immediately
-            servoInterval = setInterval(() => updateServo(servoNum, change), 200); // Repeat every 200ms
+            if (servoInterval) return;
+            updateServo(servoNum, change);
+            servoInterval = setInterval(() => updateServo(servoNum, change), 200);
         }
         
         function stopServo() {
@@ -200,10 +212,10 @@
                 case 's':
                     sendCommand('forward');
                     break;
-                case 'a': // Steer Left
+                case 'a':
                     sendCommand('left');
                     break;
-                case 'd': // Steer Right
+                case 'd':
                     sendCommand('right');
                     break;
                 case 'i':
@@ -225,12 +237,10 @@
             const key = event.key.toLowerCase();
             keysPressed.delete(key);
             
-            // Stop Servos
             if (['i', 'k', 'o', 'l'].includes(key)) {
                 stopServo();
             }
             
-            // Stop Motors if no movement keys are pressed
             if (['w', 'a', 's', 'd'].includes(key)) {
                 if (!Array.from(keysPressed).some(k => ['w', 'a', 's', 'd'].includes(k))) {
                     sendCommand('stop');
